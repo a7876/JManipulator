@@ -1,0 +1,50 @@
+package top.zproto.jmanipulator.utils.converter;
+
+import top.zproto.jmanipulator.core.GenerationHolder;
+import top.zproto.jmanipulator.core.inner.ClassInfo;
+import top.zproto.jmanipulator.utils.ClassLoaderWrapper;
+
+import java.lang.reflect.Field;
+import java.util.Map;
+
+public class CustomEnhanceGenerationHolder extends GenerationHolder {
+    public CustomEnhanceGenerationHolder(byte[] byteCode, String targetClassName, Class<?> superClass, ClassInfo superClassInfo, ClassInfo templateInfo) {
+        super(byteCode, targetClassName, superClass, null, superClassInfo, templateInfo);
+    }
+
+    private Class<?> generatedClass;
+
+    public Class<?> getClass(ClassLoader classLoader) {
+        generatedClass = ClassLoaderWrapper.loadClass(classLoader, targetClassName, byteCode);
+        return generatedClass;
+    }
+
+    /**
+     * @param o 生成的增强类的一个对象
+     * @param fieldName 模板类中原来字段名
+     * @param value 字段值
+     */
+    public void populateFields(Object o, String fieldName, Object value) {
+        Class<?> targetClass = o.getClass();
+        if (targetClass != generatedClass) {
+            throw new RuntimeException("not last time generated class");
+        }
+        getFieldNameMapper();
+        try {
+            Field field = targetClass.getDeclaredField(fieldNameMapper.get(fieldName));
+            field.setAccessible(true);
+            field.set(o, value);
+        } catch (NoSuchFieldException | IllegalAccessException e) {
+            throw new RuntimeException(e);
+        }
+
+    }
+
+    private Map<String, String> fieldNameMapper;
+
+    private void getFieldNameMapper() {
+        if (fieldNameMapper == null)
+            fieldNameMapper = fieldNameConvert(templateInfo.getFields());
+    }
+
+}
