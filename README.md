@@ -1,5 +1,32 @@
 # JMANIPULATOR
 
-## 计划是打造一个基于ASM的字节码操纵工具，提供一套特定的字节码生成工具
+## 简易字节码增强工具
 
+### 本实现是基于字节码操纵工具ASM的切面方法增强工具
+
+提供了基于类继承模式的增强功能
+
+
+#### 简易用法介绍
+
+1. 自定义一个类实现SuperClassEnhancer,其中template就是一个被增强原方法的占位调用，返回值是原方法的返回值
+在该模板中插入代码实现对于目标方法的增强
+2. 创建SuperClassEnhancer对象，传入需要被增强的超类和一个方法过滤器（TargetMethodFilter）,方法
+过滤器用于声明应该应用模板到增强类中的哪些方法
+3. 执行SuperClassEnhancer对象的enhance方法，得到SuperClassGenerationHolder，该类中包装了必要
+的信息，在使用该类时，第一此调用方法一定要调用带有ClassLoader参数版本的方法获取一个生成类的Class对象
+然后可以调用getPopulatedInstance方法获取对象，这个方法传入的是被的增强父类的一个构造方法的参数声明(使用了反射)
+4. 如果通过获取的生成类的Class对象并实例化了一个实例，如果在模板方法中定义了成员字段应该调用一次返回的Holder
+的populateFieldFromTemplate方法为这个对象实例填充模板中的字段信息
+
+
+此外还提供了一个自定义模板转化增强转化工具类，CustomSuperClassEnhanceExecutor（CSCEE）,使用者首先要通过
+构建一个CustomTemplate对象声明如何将自己的模板转化适配为EnhanceTemplate，然后调用CSCEE的execute方法执行增强
+
+
+#### 注意事项
+被增强的父类必须是可见的非final类
+模板必须是直接实现SuperClassEnhanceTemplate，模板可以拥有成员字段，且模板中的字段和template方法上的注解会被引入到新生成的类中,而父类类上
+的注解会被引入到增强类中
+自定义的模板方法中，这个方法必须返回Object，且参数只能是一个或者零个，如果是一个则必须是MethodEntryPoint
 

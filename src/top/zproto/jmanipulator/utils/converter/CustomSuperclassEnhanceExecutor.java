@@ -18,7 +18,9 @@ public class CustomSuperclassEnhanceExecutor {
 
     private CustomTemplate customTemplate;
 
-
+    /**
+     * 转化并增强
+     */
     public List<CustomEnhanceGenerationHolder> execute(CustomTemplate template, List<? extends SuperClassEnhancer<?>> enhancers) {
         Objects.requireNonNull(template);
         Objects.requireNonNull(enhancers);
@@ -44,6 +46,9 @@ public class CustomSuperclassEnhanceExecutor {
         return res;
     }
 
+    /**
+     * 修改SuperClassEnhancer以适配
+     */
     @SuppressWarnings("rawtypes")
     private class InnerSuperclassEnhance extends SuperClassEnhancer {
         public InnerSuperclassEnhance(Class<?> superClass, TargetMethodFilter filter) {
