@@ -1,4 +1,4 @@
-package top.zproto.jmanipulator.test;
+package top.zproto.jmanipulator.test.customTest;
 
 public class BusinessImpl {
     public void working() {

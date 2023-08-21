@@ -1,4 +1,4 @@
-package top.zproto.jmanipulator.test;
+package top.zproto.jmanipulator.test.customTest;
 
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;

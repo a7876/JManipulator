@@ -9,6 +9,7 @@ import java.util.List;
 import java.util.Map;
 
 public abstract class GenerationHolder {
+    public static final Class<?>[] EMPTY_CLASSES = new Class[0];
     protected byte[] byteCode;
     protected Class<?> targetClass;
     protected String targetClassName;

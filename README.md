@@ -30,3 +30,5 @@
 的注解会被引入到增强类中
 自定义的模板方法中，这个方法必须返回Object，且参数只能是一个或者零个，如果是一个则必须是MethodEntryPoint
 
+test包下defaultTest即为原始用法，而customTest则为自定义模板用法
+

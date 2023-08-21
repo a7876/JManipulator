@@ -191,7 +191,6 @@ public class SubclassMethodEnhancerExecutor extends MethodVisitor implements Opc
             case Type.VOID:
                 break;
             default:
-                System.out.println(returnType.getSort());
                 super.visitTypeInsn(CHECKCAST, returnType.getInternalName());
                 break;
         }

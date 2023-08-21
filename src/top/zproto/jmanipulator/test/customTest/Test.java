@@ -1,4 +1,4 @@
-package top.zproto.jmanipulator.test;
+package top.zproto.jmanipulator.test.customTest;
 
 import com.sun.org.slf4j.internal.LoggerFactory;
 import top.zproto.jmanipulator.core.*;
@@ -6,18 +6,15 @@ import top.zproto.jmanipulator.utils.converter.CustomEnhanceGenerationHolder;
 import top.zproto.jmanipulator.utils.converter.CustomSuperclassEnhanceExecutor;
 import top.zproto.jmanipulator.utils.converter.CustomTemplate;
 
-import java.io.IOException;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
-import java.nio.file.Files;
-import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.List;
 
 public class Test {
     public static void main(String[] args) throws NoSuchMethodException {
-        CustomTemplate template = CustomTemplate.getTemplate(Enhancer.class, "template", MethodEntryPoint.class);
+        CustomTemplate template = CustomTemplate.getTemplate(Template.class, "template", MethodEntryPoint.class);
         CustomSuperclassEnhanceExecutor executor = new CustomSuperclassEnhanceExecutor();
 
         TargetMethodFilter targetMethodFilter = new TargetMethodFilter();
@@ -29,7 +26,7 @@ public class Test {
             Class<?> kclass = e.getClass(ClassLoader.getSystemClassLoader());
             try {
                 Constructor<?> constructor = kclass.getConstructor();
-                BusinessImpl o = (BusinessImpl)constructor.newInstance();
+                BusinessImpl o = (BusinessImpl) constructor.newInstance();
                 e.populateFields(o, "logger", LoggerFactory.getLogger(Test.class));
                 o.working();
             } catch (NoSuchMethodException | InvocationTargetException | InstantiationException |
@@ -38,8 +35,7 @@ public class Test {
             }
 
             Field[] declaredFields = kclass.getDeclaredFields();
-            for (Field f :
-                    declaredFields) {
+            for (Field f : declaredFields) {
                 if (f.isAnnotationPresent(Marker.class)) {
                     System.out.println(f);
                 }
