@@ -13,31 +13,53 @@ public class CustomEnhanceGenerationHolder extends GenerationHolder {
     }
 
     private Class<?> generatedClass;
+    private Object customTemplate;
 
-    public Class<?> getClass(ClassLoader classLoader) {
+    public Class<?> getGeneratedClass(ClassLoader classLoader) {
         generatedClass = ClassLoaderWrapper.loadClass(classLoader, targetClassName, byteCode);
         return generatedClass;
     }
 
     /**
-     * @param o 生成的增强类的一个对象
+     * @param o         生成的增强类的一个对象
      * @param fieldName 模板类中原来字段名
-     * @param value 字段值
+     * @param value     字段值
      */
-    public void populateFields(Object o, String fieldName, Object value) {
+    public void populateField(Object o, String fieldName, Object value) {
         Class<?> targetClass = o.getClass();
         if (targetClass != generatedClass) {
             throw new RuntimeException("not last time generated class");
         }
+        doPopulateField(o, fieldName, value);
+    }
+
+    private void doPopulateField(Object o, String fieldName, Object value) {
         getFieldNameMapper();
         try {
-            Field field = targetClass.getDeclaredField(fieldNameMapper.get(fieldName));
+            Field field = generatedClass.getDeclaredField(fieldNameMapper.get(fieldName));
             field.setAccessible(true);
             field.set(o, value);
         } catch (NoSuchFieldException | IllegalAccessException e) {
             throw new RuntimeException(e);
         }
+    }
 
+    public void populateFields(Object o) {
+        Class<?> targetClass = o.getClass();
+        if (targetClass != generatedClass) {
+            throw new RuntimeException("not last time generated class");
+        }
+        if (customTemplate == null)
+            throw new RuntimeException("customTemplate uninitialized");
+        Field[] declaredFields = customTemplate.getClass().getDeclaredFields();
+        for (Field f : declaredFields) {
+            f.setAccessible(true);
+            try {
+                doPopulateField(o, f.getName(), f.get(customTemplate));
+            } catch (IllegalAccessException e) {
+                throw new RuntimeException("unexpected exception",e);
+            }
+        }
     }
 
     private Map<String, String> fieldNameMapper;
@@ -47,4 +69,7 @@ public class CustomEnhanceGenerationHolder extends GenerationHolder {
             fieldNameMapper = fieldNameConvert(templateInfo.getFields());
     }
 
+    public void setCustomTemplate(Object customTemplate) {
+        this.customTemplate = customTemplate;
+    }
 }

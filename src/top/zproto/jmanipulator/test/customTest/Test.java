@@ -23,11 +23,12 @@ public class Test {
         List<SuperClassEnhancer<BusinessImpl>> superClassEnhancers = Arrays.asList(enhancerE);
         List<CustomEnhanceGenerationHolder> execute = executor.execute(template, superClassEnhancers);
         execute.forEach(e -> {
-            Class<?> kclass = e.getClass(ClassLoader.getSystemClassLoader());
+            Class<?> kclass = e.getGeneratedClass(ClassLoader.getSystemClassLoader());
             try {
                 Constructor<?> constructor = kclass.getConstructor();
                 BusinessImpl o = (BusinessImpl) constructor.newInstance();
-                e.populateFields(o, "logger", LoggerFactory.getLogger(Test.class));
+                e.setCustomTemplate(new Template());
+                e.populateFields(o);
                 o.working();
             } catch (NoSuchMethodException | InvocationTargetException | InstantiationException |
                      IllegalAccessException ex) {
