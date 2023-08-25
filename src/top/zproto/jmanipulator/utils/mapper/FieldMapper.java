@@ -1,0 +1,235 @@
+package top.zproto.jmanipulator.utils.mapper;
+
+import jdk.internal.org.objectweb.asm.ClassWriter;
+import jdk.internal.org.objectweb.asm.MethodVisitor;
+import jdk.internal.org.objectweb.asm.Opcodes;
+import jdk.internal.org.objectweb.asm.Type;
+import top.zproto.jmanipulator.utils.ClassLoaderWrapper;
+import top.zproto.jmanipulator.utils.ClassNameAdapter;
+import top.zproto.jmanipulator.utils.Constants;
+
+import java.io.IOException;
+import java.io.OutputStream;
+import java.lang.reflect.Field;
+import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Collectors;
+
+/**
+ * 对象属性复制工具类<br>
+ * 实现是基于动态生成一个专门转化类执行赋值操作，避免每次赋值的反射开支
+ * source是属性值的来源，target是目标
+ * ps:对于source而言，只有具有public getter实例方法的属性可以作为来源，而对于target而言，只有具有public setter实例方法的属性可以被赋值
+ * 可以使用<code>MappingIgnore</code>注解来声明不接受被复制的值
+ */
+public final class FieldMapper implements Opcodes {
+    // thread safe
+
+    private static final Map<MapperInfo, MappingImpl> caches = new ConcurrentHashMap<>();
+
+    /**
+     * @param source 源对象
+     * @param target 目标对象
+     * @return 即为target目标对象
+     */
+    public static Object map(Object source, Object target) {
+        MapperInfo mapperInfo = new MapperInfo(source.getClass(), target.getClass());
+        MappingImpl mapping = caches.get(mapperInfo);
+        if (mapping == null) {
+            synchronized (source.getClass()) {
+                // needToOptimize
+                mapping = caches.get(mapperInfo);
+                if (mapping == null)
+                    first(source, target, mapperInfo);
+                else
+                    mapping.mapping(source, target);
+            }
+        } else {
+            mapping.mapping(source, target);
+        }
+        return target;
+    }
+
+    private static void first(Object source, Object target, MapperInfo mapperInfo) {
+        List<Method> sourceMethods = extractFieldFromSource(mapperInfo.source);
+        List<Method> targetMethods = extractFieldFromTarget(mapperInfo.target);
+        List<CoupleMethod> coupleMethods = matchCoupleMethod(sourceMethods, targetMethods);
+        MappingImpl mapper = (MappingImpl) getMapper(mapperInfo, coupleMethods);
+        caches.put(mapperInfo, mapper);
+        mapper.mapping(source, target);
+    }
+
+    private static List<Method> extractFieldFromSource(Class<?> source) {
+        Set<String> fields = Arrays.stream(source.getDeclaredFields())
+                .filter(field -> {
+                    MappingIgnore annotation = field.getAnnotation(MappingIgnore.class);
+                    if (annotation == null)
+                        return true;
+                    else
+                        return !annotation.getIgnore();
+                })
+                .map(Field::getName).collect(Collectors.toSet());
+
+        return Arrays.stream(source.getDeclaredMethods()).filter(method -> {
+            String name = getFieldNameInGetterMethodName(method.getName());
+            MappingIgnore annotation = method.getAnnotation(MappingIgnore.class);
+            if ((annotation != null && annotation.getIgnore()) || name == null)
+                return false;
+            int modifiers = method.getModifiers();
+            return Modifier.isPublic(modifiers) && !Modifier.isStatic(modifiers)
+                    && method.getParameterTypes().length == 0 && fields.contains(name);
+        }).collect(Collectors.toList());
+    }
+
+    private static List<Method> extractFieldFromTarget(Class<?> target) {
+        Set<String> fields = Arrays.stream(target.getDeclaredFields())
+                .filter(field -> {
+                    MappingIgnore annotation = field.getAnnotation(MappingIgnore.class);
+                    if (annotation == null)
+                        return true;
+                    return !annotation.setIgnore();
+                })
+                .map(Field::getName).collect(Collectors.toSet());
+
+        return Arrays.stream(target.getDeclaredMethods()).filter(method -> {
+            String name = getFieldNameInSetterMethodName(method.getName());
+            MappingIgnore annotation = method.getAnnotation(MappingIgnore.class);
+            if ((annotation != null && annotation.setIgnore()) || name == null)
+                return false;
+            int modifiers = method.getModifiers();
+            return Modifier.isPublic(modifiers) && !Modifier.isStatic(modifiers)
+                    && method.getParameterTypes().length == 1 && fields.contains(name);
+        }).collect(Collectors.toList());
+    }
+
+    private static List<CoupleMethod> matchCoupleMethod(List<Method> source, List<Method> target) {
+        Map<String, Method> tm = new HashMap<>();
+        target.forEach(method -> tm.put(getFieldNameInSetterMethodName(method.getName()), method));
+
+        List<CoupleMethod> res = new ArrayList<>();
+        source.forEach(method -> {
+            String name = getFieldNameInGetterMethodName(method.getName());
+            Method tmp = tm.get(name);
+            if (tmp != null) {
+                res.add(new CoupleMethod(method, tmp));
+            }
+        });
+
+        return res;
+    }
+
+    /**
+     * 生成具体的Mapper
+     */
+    private static Object getMapper(MapperInfo info, List<CoupleMethod> coupleMethods) {
+        ClassWriter classWriter = new ClassWriter(ClassWriter.COMPUTE_MAXS | ClassWriter.COMPUTE_FRAMES);
+        String superClassName = ClassNameAdapter.getInternalName(MappingImpl.class.getName());
+        String uniqueName = ClassNameAdapter.getGlobalUniqueName("top/zproto/jmanipulator/utils/mapper/");
+        classWriter.visit(Constants.VERSION, ACC_PUBLIC | ACC_SYNTHETIC,
+                uniqueName, null, superClassName, null);
+        MethodVisitor methodVisitor = classWriter.visitMethod(ACC_PUBLIC, "<init>", "()V", null, null);
+        methodVisitor.visitCode();
+        methodVisitor.visitVarInsn(ALOAD, 0);
+        methodVisitor.visitMethodInsn(INVOKESPECIAL, superClassName, "<init>", "()V", false);
+        methodVisitor.visitInsn(RETURN);
+        methodVisitor.visitMaxs(1, 1);
+        methodVisitor.visitEnd();
+
+        methodVisitor = classWriter.visitMethod(ACC_PUBLIC, MappingImpl.METHOD_NAME,
+                MappingImpl.METHOD_DESC, null, null);
+        String sourceName = ClassNameAdapter.getInternalName(info.source.getName());
+        String targetName = ClassNameAdapter.getInternalName(info.target.getName());
+        methodVisitor.visitCode();
+        for (CoupleMethod coupleMethod : coupleMethods) {
+            methodVisitor.visitVarInsn(ALOAD, 2);
+            methodVisitor.visitTypeInsn(CHECKCAST,targetName); // 转化类型
+            methodVisitor.visitVarInsn(ALOAD, 1);
+            methodVisitor.visitTypeInsn(CHECKCAST,sourceName); // 转化类型
+            Method getter = coupleMethod.getter;
+            Method setter = coupleMethod.setter;
+            methodVisitor.visitMethodInsn(INVOKEVIRTUAL, sourceName,
+                    getter.getName(), Type.getMethodDescriptor(getter), false);
+            methodVisitor.visitMethodInsn(INVOKEVIRTUAL, targetName,
+                    setter.getName(), Type.getMethodDescriptor(setter), false);
+        }
+        methodVisitor.visitInsn(RETURN);
+        methodVisitor.visitMaxs(2, 3);
+        methodVisitor.visitEnd();
+        classWriter.visitEnd();
+
+        try {
+            OutputStream outputStream = Files.newOutputStream(Paths.get("Tesdsa.class"));
+            outputStream.write(classWriter.toByteArray());
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+        try {
+            return ClassLoaderWrapper.loadClass(FieldMapper.class.getClassLoader(),
+                    ClassNameAdapter.getReverseInternalName(uniqueName), classWriter.toByteArray()).newInstance();
+        } catch (InstantiationException | IllegalAccessException e) {
+            throw new RuntimeException("unexpected exception", e);
+        }
+    }
+
+    private static String getFieldNameInGetterMethodName(String name) {
+        if (name.startsWith("get")) {
+            return firstToLower(name.substring(3));
+        } else if (name.startsWith("is")) {
+            return firstToLower(name.substring(2));
+        } else {
+            return null;
+        }
+    }
+
+    private static String getFieldNameInSetterMethodName(String name) {
+        if (name.startsWith("set")) {
+            return firstToLower(name.substring(3));
+        } else {
+            return null;
+        }
+    }
+
+    private static String firstToLower(String str) {
+        StringBuilder stringBuilder = new StringBuilder(str);
+        stringBuilder.setCharAt(0, Character.toLowerCase(str.charAt(0)));
+        return stringBuilder.toString();
+    }
+
+    private static class MapperInfo {
+        Class<?> source;
+        Class<?> target;
+
+        public MapperInfo(Class<?> source, Class<?> target) {
+            this.source = source;
+            this.target = target;
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) return true;
+            if (o == null || getClass() != o.getClass()) return false;
+            MapperInfo that = (MapperInfo) o;
+            return Objects.equals(source, that.source) && Objects.equals(target, that.target);
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hash(source, target);
+        }
+    }
+
+    private static class CoupleMethod {
+        private final Method getter;
+        private final Method setter;
+
+        public CoupleMethod(Method getter, Method setter) {
+            this.getter = getter;
+            this.setter = setter;
+        }
+    }
+
+}

@@ -28,4 +28,10 @@ public interface ClassNameAdapter {
     static String getSyntheticClassName(String baseName) {
         return baseName + Constants.SYNTHETIC_CLASS + count.getAndIncrement();
     }
+
+    AtomicInteger uniqueCount = new AtomicInteger();
+
+    static String getGlobalUniqueName(String baseName) {
+        return baseName + Constants.SYNTHETIC_CLASS + "UNIQUE$" + uniqueCount.getAndIncrement();
+    }
 }
