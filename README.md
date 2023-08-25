@@ -27,7 +27,7 @@
 #### 注意事项
 被增强的父类必须是可见的非final类
 模板必须是直接实现SuperClassEnhanceTemplate，模板可以拥有成员字段，且模板中的字段和template方法上的注解会被引入到新生成的类中,而父类类上
-的注解会被引入到增强类中
+和构造器的注解会被引入到增强类中
 自定义的模板方法中，这个方法必须返回Object，且参数只能是一个或者零个，如果是一个则必须是MethodEntryPoint
 
 test包下defaultTest即为原始用法，而customTest则为自定义模板用法

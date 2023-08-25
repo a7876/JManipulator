@@ -2,6 +2,7 @@ package top.zproto.jmanipulator.core.inner;
 
 import jdk.internal.org.objectweb.asm.*;
 import top.zproto.jmanipulator.core.SuperClassEnhanceTemplate;
+import top.zproto.jmanipulator.core.inner.helper.ConstructorAdapter;
 import top.zproto.jmanipulator.core.inner.helper.SubclassMethodEnhancerExecutor;
 import top.zproto.jmanipulator.core.inner.helper.SuperClassConstructorAdapter;
 import top.zproto.jmanipulator.utils.ClassNameAdapter;
@@ -154,9 +155,9 @@ public class SubclassEnhanceExecutor implements Constants {
                         superClassName, selfName, templateName, Type.getMethodType(desc), fieldMapper);
             } else if (name.equals("<init>")) {
                 MethodVisitor methodVisitor = super.visitMethod(access, name, desc, signature, exceptions);
-                // 固定的构造器格式
-                SuperClassConstructorAdapter.adaptSuperConstructor(methodVisitor, superClassName, name, desc);
-                return null;
+//                // 固定的构造器格式
+//                SuperClassConstructorAdapter.adaptSuperConstructor(methodVisitor, superClassName, name, desc);
+                return new ConstructorAdapter(ASM_API, methodVisitor, superClassName, name, desc);
             } else {
 //                return super.visitMethod(access, name, desc, signature, exceptions);
                 return null;
