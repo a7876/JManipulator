@@ -32,3 +32,8 @@
 
 test包下defaultTest即为原始用法，而customTest则为自定义模板用法
 
+#### utils 工具类
+mapper 包下的 FieldMapper 实现不同实体类之间相互赋值的工具类，动态生成专属的映射类，只有在第一次调用时时间开支大，之后都是setter/getter赋值
+避免每次反射调用，多次使用明显速度快于反射调用赋值
+test包下fieldMapperTest即为用例示意
+
