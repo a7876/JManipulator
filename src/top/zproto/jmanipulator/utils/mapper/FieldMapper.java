@@ -1,16 +1,17 @@
 package top.zproto.jmanipulator.utils.mapper;
 
-import jdk.internal.org.objectweb.asm.ClassWriter;
-import jdk.internal.org.objectweb.asm.MethodVisitor;
-import jdk.internal.org.objectweb.asm.Opcodes;
-import jdk.internal.org.objectweb.asm.Type;
+import jdk.internal.org.objectweb.asm.*;
 import top.zproto.jmanipulator.utils.ClassLoaderWrapper;
 import top.zproto.jmanipulator.utils.ClassNameAdapter;
 import top.zproto.jmanipulator.utils.Constants;
 
+import java.io.IOException;
+import java.io.OutputStream;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
@@ -239,10 +240,39 @@ public final class FieldMapper implements Opcodes {
                 name = "";
         }
         name += "Value";
-
         String desc = "()" + coupleMethod.primitiveType.getDescriptor();
+        // 防止空指针
+        Label normal = new Label();
+        Label directEnd = new Label();
+        mv.visitVarInsn(ASTORE, 3);
+        mv.visitVarInsn(ALOAD, 3);
+        mv.visitJumpInsn(IFNONNULL, normal);
+        int sort = coupleMethod.primitiveType.getSort();
+        switch (sort) {
+            case Type.BOOLEAN:
+            case Type.CHAR:
+            case Type.BYTE:
+            case Type.SHORT:
+            case Type.INT:
+                mv.visitInsn(ICONST_0);
+                break;
+            case Type.FLOAT:
+                mv.visitInsn(FCONST_0);
+                break;
+            case Type.LONG:
+                mv.visitInsn(LCONST_0);
+                break;
+            case Type.DOUBLE:
+                mv.visitInsn(DCONST_0);
+                break;
+        }
+        mv.visitJumpInsn(GOTO, directEnd);
+        mv.visitLabel(normal);
+        mv.visitVarInsn(ALOAD, 3);
         mv.visitMethodInsn(INVOKEVIRTUAL, coupleMethod.boxType.getInternalName(), name, desc, false);
+        mv.visitLabel(directEnd);
     }
+
 
     /**
      * 检查是否需要包装或者解包装
@@ -338,7 +368,7 @@ public final class FieldMapper implements Opcodes {
             this.target = target;
         }
 
-        public void checkModifier(){
+        public void checkModifier() {
             int modifiers = source.getModifiers();
             if (!Modifier.isPublic(modifiers))
                 throw new IllegalStateException(source + " is not public");
