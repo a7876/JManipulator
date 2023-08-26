@@ -172,12 +172,6 @@ public final class FieldMapper implements Opcodes {
         methodVisitor.visitEnd();
         classWriter.visitEnd();
 
-        try {
-            OutputStream outputStream = Files.newOutputStream(Paths.get("Tesdsa.class"));
-            outputStream.write(classWriter.toByteArray());
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
         // 实例化
         try {
             return ClassLoaderWrapper.loadClass(FieldMapper.class.getClassLoader(),
