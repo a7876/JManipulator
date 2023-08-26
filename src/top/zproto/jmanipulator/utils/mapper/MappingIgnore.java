@@ -12,7 +12,9 @@ import java.lang.annotation.Target;
 @Retention(RetentionPolicy.RUNTIME)
 @Target({ElementType.METHOD, ElementType.FIELD})
 public @interface MappingIgnore {
+    // 取值时忽略
     boolean getIgnore() default true;
 
+    // 赋值时忽略
     boolean setIgnore() default true;
 }

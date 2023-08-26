@@ -1,6 +1,7 @@
 package top.zproto.jmanipulator.test.fieldMapperTest;
 
 import top.zproto.jmanipulator.utils.mapper.FieldMapper;
+import top.zproto.jmanipulator.utils.mapper.MappingIgnore;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
@@ -21,6 +22,7 @@ public class Test {
     }
 
     public static class User {
+        @MappingIgnore(setIgnore = false)
         private String name;
         private Integer age;
         private boolean available;
@@ -60,6 +62,7 @@ public class Test {
     }
 
     public static class UserDto {
+        @MappingIgnore(getIgnore = false)
         private String name;
         private int age;
         private Boolean available;
@@ -90,8 +93,8 @@ public class Test {
     }
 
     public static class Account {
-        String name;
-        String age;
+        private String name;
+        private String age;
 
         public String getName() {
             return name;

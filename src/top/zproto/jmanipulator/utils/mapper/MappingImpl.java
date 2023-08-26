@@ -2,6 +2,9 @@ package top.zproto.jmanipulator.utils.mapper;
 
 import jdk.internal.org.objectweb.asm.Type;
 
+/**
+ * 转化器父类，永远不会直接实例化此类
+ */
 class MappingImpl {
     final static String METHOD_NAME = "mapping";
     final static String METHOD_DESC;
