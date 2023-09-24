@@ -5,13 +5,9 @@ import top.zproto.jmanipulator.utils.ClassLoaderWrapper;
 import top.zproto.jmanipulator.utils.ClassNameAdapter;
 import top.zproto.jmanipulator.utils.Constants;
 
-import java.io.IOException;
-import java.io.OutputStream;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
-import java.nio.file.Files;
-import java.nio.file.Paths;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
@@ -27,6 +23,8 @@ public final class FieldMapper implements Opcodes {
     // thread safe
 
     private static final Map<MapperInfo, MappingImpl> caches = new ConcurrentHashMap<>();
+    private static final Map<Class<?>, Object> concurrentController = new ConcurrentHashMap<>();
+    private static final Object PLACE_HOLDER = new Object();
 
     /**
      * @param source 源对象
@@ -37,13 +35,16 @@ public final class FieldMapper implements Opcodes {
         MapperInfo mapperInfo = new MapperInfo(source.getClass(), target.getClass());
         MappingImpl mapping = caches.get(mapperInfo);
         if (mapping == null) {
-            synchronized (source.getClass()) {
+            try {
+                concurrentCheck(source.getClass());
                 // needToOptimize
                 mapping = caches.get(mapperInfo);
                 if (mapping == null)
                     first(source, target, mapperInfo);
                 else
                     mapping.mapping(source, target);
+            } finally {
+                concurrentRelease(source.getClass());
             }
         } else {
             mapping.mapping(source, target);
@@ -59,6 +60,17 @@ public final class FieldMapper implements Opcodes {
         MappingImpl mapper = (MappingImpl) getMapper(mapperInfo, coupleMethods);
         caches.put(mapperInfo, mapper);
         mapper.mapping(source, target);
+    }
+
+    /**
+     * 处理并发
+     */
+    private static void concurrentCheck(Class<?> source) {
+        while (concurrentController.putIfAbsent(source, PLACE_HOLDER) != null) ;
+    }
+
+    private static void concurrentRelease(Class<?> source) {
+        concurrentController.remove(source);
     }
 
     private static List<Method> extractFieldFromSource(Class<?> source) {
