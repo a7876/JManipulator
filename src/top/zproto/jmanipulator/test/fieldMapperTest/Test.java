@@ -1,10 +1,7 @@
 package top.zproto.jmanipulator.test.fieldMapperTest;
 
 import top.zproto.jmanipulator.utils.mapper.FieldMapper;
-import top.zproto.jmanipulator.utils.mapper.MappingIgnore;
-
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
+import top.zproto.jmanipulator.utils.mapper.SuperInclude;
 
 public class Test {
 
@@ -30,19 +27,10 @@ public class Test {
         System.out.println(account);
     }
 
-    public static class User {
-        @MappingIgnore(setIgnore = false)
-        private String name;
+    @SuperInclude
+    public static class User extends NameHolder{
         private int age;
         private boolean available;
-
-        public String getName() {
-            return name;
-        }
-
-        public void setName(String name) {
-            this.name = name;
-        }
 
         public int getAge() {
             return age;
@@ -63,26 +51,17 @@ public class Test {
         @Override
         public String toString() {
             return "User{" +
-                    "name='" + name + '\'' +
+                    "name='" + getName() + '\'' +
                     ", age=" + age +
                     ", isAvailable=" + available +
                     '}';
         }
     }
 
-    public static class UserDto {
-        @MappingIgnore(getIgnore = false)
-        private String name;
+    @SuperInclude
+    public static class UserDto extends NameHolder{
         private Integer age;
         private Boolean available;
-
-        public String getName() {
-            return name;
-        }
-
-        public void setName(String name) {
-            this.name = name;
-        }
 
         public Integer getAge() {
             return age;
@@ -101,17 +80,9 @@ public class Test {
         }
     }
 
-    public static class Account {
-        private String name;
+    @SuperInclude
+    public static class Account extends NameHolder {
         private String age;
-
-        public String getName() {
-            return name;
-        }
-
-        public void setName(String name) {
-            this.name = name;
-        }
 
         public String getAge() {
             return age;
@@ -124,9 +95,22 @@ public class Test {
         @Override
         public String toString() {
             return "Account{" +
-                    "name='" + name + '\'' +
+                    "name='" + getName() + '\'' +
                     ", age='" + age + '\'' +
                     '}';
+        }
+    }
+
+    static class NameHolder{
+//        @MappingIgnore
+        private String name;
+
+        public String getName() {
+            return name;
+        }
+
+        public void setName(String name) {
+            this.name = name;
         }
     }
 }

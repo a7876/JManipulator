@@ -74,7 +74,7 @@ public final class FieldMapper implements Opcodes {
     }
 
     private static List<Method> extractFieldFromSource(Class<?> source) {
-        Set<String> fields = Arrays.stream(source.getDeclaredFields())
+        Set<String> fields = getFields(source).stream()
                 .filter(field -> {
                     MappingIgnore annotation = field.getAnnotation(MappingIgnore.class);
                     if (annotation == null)
@@ -96,7 +96,7 @@ public final class FieldMapper implements Opcodes {
     }
 
     private static List<Method> extractFieldFromTarget(Class<?> target) {
-        Set<String> fields = Arrays.stream(target.getDeclaredFields())
+        Set<String> fields = getFields(target).stream()
                 .filter(field -> {
                     MappingIgnore annotation = field.getAnnotation(MappingIgnore.class);
                     if (annotation == null)
@@ -369,6 +369,25 @@ public final class FieldMapper implements Opcodes {
                 return null;
         }
         return Object;
+    }
+
+    private static List<Field> getFields(Class<?> klass) {
+        List<Field> res = new ArrayList<>();
+        SuperInclude superInclude = klass.getAnnotation(SuperInclude.class);
+        if (superInclude == null) {
+            res.addAll(Arrays.asList(klass.getDeclaredFields()));
+            return res;
+        } else {
+            List<Class<?>> classes = new ArrayList<>();
+            Set<Class<?>> filter = new HashSet<>(Arrays.asList(superInclude.exclude()));
+            while (klass != null) {
+                if (!filter.contains(klass))
+                    classes.add(klass);
+                klass = klass.getSuperclass();
+            }
+            classes.forEach(item -> res.addAll(Arrays.asList(item.getDeclaredFields())));
+            return res;
+        }
     }
 
     private static class MapperInfo {
