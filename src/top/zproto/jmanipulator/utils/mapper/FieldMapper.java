@@ -18,6 +18,7 @@ import java.util.stream.Collectors;
  * source是属性值的来源，target是目标
  * ps:对于source而言，只有具有public getter实例方法的属性可以作为来源，而对于target而言，只有具有public setter实例方法的属性可以被赋值
  * 可以使用<code>MappingIgnore</code>注解来声明不接受被复制的值
+ * 属性的复制只针对当前类，不针对父类
  */
 public final class FieldMapper implements Opcodes {
     // thread safe
@@ -37,7 +38,6 @@ public final class FieldMapper implements Opcodes {
         if (mapping == null) {
             try {
                 concurrentCheck(source.getClass());
-                // needToOptimize
                 mapping = caches.get(mapperInfo);
                 if (mapping == null)
                     first(source, target, mapperInfo);
@@ -84,7 +84,7 @@ public final class FieldMapper implements Opcodes {
                 })
                 .map(Field::getName).collect(Collectors.toSet());
 
-        return Arrays.stream(source.getDeclaredMethods()).filter(method -> {
+        return Arrays.stream(source.getMethods()).filter(method -> {
             String name = getFieldNameInGetterMethodName(method.getName());
             MappingIgnore annotation = method.getAnnotation(MappingIgnore.class);
             if ((annotation != null && annotation.getIgnore()) || name == null)
@@ -105,7 +105,7 @@ public final class FieldMapper implements Opcodes {
                 })
                 .map(Field::getName).collect(Collectors.toSet());
 
-        return Arrays.stream(target.getDeclaredMethods()).filter(method -> {
+        return Arrays.stream(target.getMethods()).filter(method -> {
             String name = getFieldNameInSetterMethodName(method.getName());
             MappingIgnore annotation = method.getAnnotation(MappingIgnore.class);
             if ((annotation != null && annotation.setIgnore()) || name == null)
