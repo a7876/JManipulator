@@ -59,6 +59,7 @@ public class Test {
     }
 
     @SuperInclude
+//    @SuperInclude(exclude = {NameHolder.class})
     public static class UserDto extends NameHolder{
         private Integer age;
         private Boolean available;
