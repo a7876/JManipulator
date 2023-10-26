@@ -54,8 +54,8 @@ public final class FieldMapper implements Opcodes {
 
     private static void first(Object source, Object target, final MapperInfo mapperInfo) {
         mapperInfo.checkModifier();
-        List<Method> sourceMethods = extractFieldFromSource(mapperInfo.source);
-        List<Method> targetMethods = extractFieldFromTarget(mapperInfo.target);
+        List<Method> sourceMethods = extractMethodFromSource(mapperInfo.source);
+        List<Method> targetMethods = extractMethodFromTarget(mapperInfo.target);
         List<CoupleMethod> coupleMethods = matchCoupleMethod(sourceMethods, targetMethods);
         MappingImpl mapper = (MappingImpl) getMapper(mapperInfo, coupleMethods);
         caches.put(mapperInfo, mapper);
@@ -73,7 +73,7 @@ public final class FieldMapper implements Opcodes {
         concurrentController.remove(source);
     }
 
-    private static List<Method> extractFieldFromSource(Class<?> source) {
+    private static List<Method> extractMethodFromSource(Class<?> source) {
         Set<String> fields = getFields(source).stream()
                 .filter(field -> {
                     MappingIgnore annotation = field.getAnnotation(MappingIgnore.class);
@@ -95,7 +95,7 @@ public final class FieldMapper implements Opcodes {
         }).collect(Collectors.toList());
     }
 
-    private static List<Method> extractFieldFromTarget(Class<?> target) {
+    private static List<Method> extractMethodFromTarget(Class<?> target) {
         Set<String> fields = getFields(target).stream()
                 .filter(field -> {
                     MappingIgnore annotation = field.getAnnotation(MappingIgnore.class);
